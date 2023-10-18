@@ -1,0 +1,78 @@
+echo "# XRPEASY.CO.UK-" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/R6eron1968/XRPEASY.CO.UK-.git
+git push -u origin main
+from web3 import Web3
+from flare_sdk import Flare
+import textwrap
+
+# Connect to the Flare Network
+w3 = Web3(Web3.HTTPProvider('https://rpc.flare.network'))
+flare = Flare(w3)
+
+# Set the agent address and collateral
+agent_address = '0x1234567890123456789012345678901234567890'
+collateral = 1000000000000000000 # 1 Spark (FLR)
+
+def convert_to_fasset(crypto, amount):
+    if crypto == 'FLR':
+        # Collect and wrap FLR
+        tx_hash = flare.fasset.collect(agent_address, amount, agent_address)
+        wrapped_tx_hash = flare.fasset.wrap('FLR', [tx_hash], agent_address)
+        tx_hash = wrapped_tx_hash[0]
+    else:
+        # Mint the F-Asset
+        tx_hash = flare.fasset.mint(crypto, agent_address, amount, agent_address)
+    return tx_hash
+
+def delegate_flare(input_flare):
+    # Wrap all input flare except the first 5 flr
+    wrapped_flare = input_flare[5:]
+    wrapped_tx_hash = flare.fasset.wrap('FLR', wrapped_flare, agent_address)
+    # Delegate 50/50 with previous month's best performing FTSOs
+    best_ftsos = [1234, 5678, 9012] # Replace with actual best performing FTSOs
+    delegated_tx_hashes = []
+    for i, tx_hash in enumerate(wrapped_tx_hash):
+        if i % 2 == 0:
+            delegated_tx_hashes.append(flare.signal_provider.delegate(best_ftsos[0], tx_hash, collateral, agent_address))
+        else:
+            delegated_tx_hashes.append(flare.signal_provider.delegate(best_ftsos[1], tx_hash, collateral, agent_address))
+    return delegated_tx_hashes
+
+def report_tax_implications(monthly_flare_rewards, current_flare_value, start_figure, duration_years, tax_country):
+    # Calculate total Flare rewards over duration_years
+    total_flare_rewards = monthly_flare_rewards * 12 * duration_years
+    # Calculate total Flare value over duration_years
+    total_flare_value = current_flare_value * start_figure + total_flare_rewards
+    # Calculate taxable income based on tax_country
+    if tax_country == 'UK':
+        taxable_income = total_flare_value * 0.2
+    elif tax_country == 'US':
+        taxable_income = total_flare_value * 0.3
+    else:
+        taxable_income = 0
+    return taxable_income
+
+# Example usage
+monthly_flare_rewards = 180
+current_flare_value = 2696
+start_figure = 25000
+duration_years = 2
+tax_country = 'UK'
+
+# Convert/mint incoming crypto tokens into F assets
+input_crypto = 'BTC'
+input_amount = 0.5
+tx_hash = convert_to_fasset(input_crypto, input_amount)
+
+# Automatically wrap and delegate F assets
+input_flare = f"{start_figure} FLR, {input_amount} {input_crypto}"
+delegated_tx_hashes = delegate_flare(input_flare)
+
+# Report tax implications monthly
+taxable_income = report_tax_implications(monthly_flare_rewards, current_flare_value, start_figure, duration_years, tax_country)
+print(f"Taxable income per month: {taxable_income / (12 * duration_years)}")
+
